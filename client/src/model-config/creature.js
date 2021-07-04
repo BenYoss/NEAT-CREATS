@@ -1,11 +1,28 @@
 import NeuralNetwork from '../helpers/nn';
 
+// Mutation function to be passed into creature.brain
+function randomG(v) {
+  let r = 0;
+  for (let i = v; i > 0; i -= 1) {
+    r += Math.random();
+  }
+  return r / v;
+}
+
+function mutation(x) {
+  if (Math.floor(Math.random() * 1) < 0.1) {
+    const offset = randomG(1) * 0.5;
+    const newx = x + offset;
+    return newx;
+  }
+  return x;
+}
+
 class Creature {
-  constructor() {
+  constructor(brain) {
     this.y = 3;
     this.x = 3;
     this.speed = 1;
-    this.score = 0;
     this.lifeSpan = 100;
     this.size = 1;
     // inputs:
@@ -16,7 +33,17 @@ class Creature {
      * creature size
      * creature speed
      */
-    this.brain = new NeuralNetwork(4, 4, 3);
+    if (brain) {
+      this.brain = brain.copy();
+    } else {
+      this.brain = new NeuralNetwork(4, 4, 3);
+    }
+    this.score = 0;
+    this.fitness = 0;
+  }
+
+  mutate() {
+    this.brain.mutate(mutation);
   }
 
   up() {
