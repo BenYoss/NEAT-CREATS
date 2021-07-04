@@ -4,10 +4,12 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 // import the creature Neural Network into the 3D environment.
 import Creature from '../model-config/creature';
+import { pickOne, calculateFitness } from '../model-config/ga';
 
 // How many creatures would be in this enviornment?
 const creaturePopulation = 10;
 // How big is the map?
+let savedCreatures = [];
 const mapSize = 20;
 /**
  * function: Creature
@@ -61,7 +63,7 @@ function Land() {
 }
 // container for plants.
 const plants = [];
-for (let i = 0; i < 100; i += 1) {
+for (let i = 0; i < 50; i += 1) {
 // generates random positions for the plants to spawn.
   plants.push({
     positions: [((Math.random() * (mapSize * 2)) - mapSize) / 2,
@@ -83,6 +85,18 @@ export default function Env() {
    * @func populate
    *    populates the creatures state with new creatures.
    */
+  function repopulate() {
+    calculateFitness(creatures);
+    for (let j = 0; j < creaturePopulation; j += 1) {
+      console.log(savedCreatures);
+      creatures.push(pickOne(savedCreatures));
+      // think helps creature make a new decision
+      creatures[j].think();
+      // update updates the creature's state.
+      creatures[j].update();
+    }
+    setCreatures([...creatures]);
+  }
   function populate() {
     for (let j = 0; j < creaturePopulation; j += 1) {
       creatures.push(new Creature());
@@ -111,8 +125,24 @@ export default function Env() {
       if (creat.y > mapSize || creat.y < -mapSize) {
         upCreat.y = prevY;
       }
+      plants.forEach((plant, p) => {
+        if (plant.positions[0] > (creat.x - creat.size)
+        && plant.positions[0] < (creat.x + creat.size)) {
+          creat.score += 10;
+          creat.lifeSpan += 10;
+          creat.size += 0.01;
+          plants.splice(p, 1);
+          plants.push({
+            positions: [((Math.random() * (mapSize * 2)) - mapSize) / 2,
+              ((Math.random() * (mapSize * 2)) - mapSize) / 2, 0.1],
+            size: [(Math.random() * 0.2), (Math.random() * 0.2),
+              (Math.random() * 0.2)],
+          });
+        }
+      });
     } else {
-      creatures.splice(k, 1);
+      savedCreatures.push(creatures.splice(k, 1)[0]);
+      savedCreatures[savedCreatures.length - 1].lifeSpan = 100;
       deathCount += 1;
     }
   });
@@ -127,11 +157,12 @@ export default function Env() {
   }, []);
   // when all creatures die, the environment re-populates.
   if (deathCount === creaturePopulation) {
-    populate();
+    repopulate();
     deathCount = 0;
+    savedCreatures = [];
   }
   return (
-    <div style={{ height: window.innerHeight * 0.73 }}>
+    <div style={{ height: window.innerHeight * 0.73, backgroundColor: 'black' }}>
       <Canvas camera={{ zoom: 60, position: [0, 20, 100] }}>
         <OrbitControls />
         <directionalLight intensity={0.5} />
