@@ -1,6 +1,9 @@
 /* eslint-disable eol-last */
 // Other techniques for learning
 // eslintignore
+
+import Matrix from './matrix';
+
 class ActivationFunction {
     constructor(func, dfunc) {
       this.func = func;
@@ -173,3 +176,5 @@ class ActivationFunction {
   
   
   }
+
+  export default NeuralNetwork;
