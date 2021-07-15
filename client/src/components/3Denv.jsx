@@ -9,17 +9,19 @@ import fonts from '../helpers/fonts';
 // import the creature Neural Network into the 3D environment.
 import Creature from '../model-config/creature';
 import { pickOne, calculateFitness } from '../model-config/ga';
+import Gui from './Gui';
+import '../styles/style.scss';
 
 extend({ Text });
 // How many creatures would start in this enviornment?
-const creaturePopulation = 100;
+const creaturePopulation = 50;
 // maximum population cap of creatures.
-const maxPop = 100;
+const maxPop = 50;
 // max number of plants
 const plantAmount = 1000;
 const creatSight = 10;
 // How big is the map?
-const mapSize = 30;
+const mapSize = 20;
 // incrementor for subtractor when creatures are at border.
 let inc = 0;
 // number of saved creatures.
@@ -73,23 +75,25 @@ function CreatureModel(args) {
         />
       </mesh>
       {/* mesh for creature sight radius */}
-      <mesh
-        rotation={[0, 0, 0]}
-        scale={[arg.size[0]
-          * (arg.creature.isCarn ? creatSight
-          + 1 : creatSight), arg.size[1]
-          * (arg.creature.isCarn ? (creatSight + 1) : creatSight), arg.size[2]]}
-        position={arg.positions}
-        onClick={() => { console.log(arg.creature); }}
-      >
-        <sphereGeometry attach="geometry" />
-        <meshStandardMaterial
-          attach="material"
-          color="red"
-          transparent
-          opacity={0.2}
-        />
-      </mesh>
+      {arg.showVision && (
+        <mesh
+          rotation={[0, 0, 0]}
+          scale={[arg.size[0]
+            * (arg.creature.isCarn ? creatSight
+            + 1 : creatSight), arg.size[1]
+            * (arg.creature.isCarn ? (creatSight + 1) : creatSight), arg.size[2]]}
+          position={arg.positions}
+          onClick={() => { console.log(arg.creature); }}
+        >
+          <sphereGeometry attach="geometry" />
+          <meshStandardMaterial
+            attach="material"
+            color="red"
+            transparent
+            opacity={0.2}
+          />
+        </mesh>
+      )}
     </>
   );
 }
@@ -152,6 +156,7 @@ let deathCount = 0;
 const creatures = [];
 export default function Env() {
   const [, setUpdate] = useState([0]);
+  const [visibleVision, setVV] = useState(false);
 
   /**
    * @func reproduce
@@ -252,12 +257,12 @@ export default function Env() {
       // for when the creature goes beyond the border.
       if (creat.x > mapSize || creat.x < -mapSize) {
         upCreat.x = prevX;
-        upCreat.score = 0;
+        upCreat.lifeSpan -= 1;
       }
       if (creat.y > mapSize || creat.y < -mapSize) {
         upCreat.y = prevY;
         if (upCreat.lifeSpan > 0) {
-          upCreat.lifeSpan -= inc;
+          upCreat.lifeSpan -= 1;
         }
         upCreat.score = 0;
         inc += 1;
@@ -306,7 +311,7 @@ export default function Env() {
           creat.lockedPlant = null;
           creat.lifeSpan += 400;
           creat.size += 0.01;
-          creat.speed -= 0.01;
+          // creat.speed -= 0.0002;
           reproduce(creat);
           plants.splice(p, 1);
           plants.push({
@@ -337,7 +342,7 @@ export default function Env() {
     if (deathCount !== creatures.length && creatures.length > 1 && !timer) {
       timer = setInterval(() => {
         setUpdate([]);
-      }, 10);
+      }, 1);
     }
     repopulator = setInterval(() => {
       repopulate();
@@ -380,10 +385,14 @@ export default function Env() {
             size={[creature.size / 2, creature.size / 2,
               creature.size / 2]}
             color={creature.isCarn ? 'red' : 'blue'}
+            showVision={visibleVision}
           />
         ))}
         <Land />
       </Canvas>
+      <div className="gui-container" style={{ maxHeight: "20px" }}>
+        <Gui setVV={setVV} visibleVision={visibleVision} creatures={creatures} />
+      </div>
     </div>
   );
 }
