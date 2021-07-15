@@ -1,5 +1,6 @@
 import React from 'react';
 import Env from './3Denv';
+import '../styles/style.scss';
 
 // Parent component to run all children.
 const App = () => (
