@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-  mode: 'development',
+  mode: 'production',
   watch: true,
   entry: path.resolve('./client/src/Index.jsx'),
   output: {
