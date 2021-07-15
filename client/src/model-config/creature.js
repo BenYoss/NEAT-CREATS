@@ -85,14 +85,21 @@ class Creature {
 
   down() {
     this.y -= this.speed;
+    this.lifeSpan -= this.speed;
   }
 
   left() {
     this.x -= this.speed;
+    this.lifeSpan -= this.speed;
   }
 
   right() {
     this.x += this.speed;
+    this.lifeSpan -= this.speed;
+  }
+
+  editSpeed(val) {
+    this.speed = val;
   }
 
   think() {
@@ -113,6 +120,7 @@ class Creature {
     } else if (output[1] <= 1) {
       this.right();
     }
+    this.editSpeed(output[2] / 5);
   }
 
   update() {
