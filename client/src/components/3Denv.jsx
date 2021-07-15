@@ -14,12 +14,13 @@ import '../styles/style.scss';
 
 extend({ Text });
 // How many creatures would start in this enviornment?
-const creaturePopulation = 50;
+let creaturePopulation = 50;
 // maximum population cap of creatures.
-const maxPop = 50;
+let maxPop = 50;
 // max number of plants
-const plantAmount = 1000;
-const creatSight = 10;
+let plantAmount = 1000;
+// creature sight length
+let creatSight = 10;
 // How big is the map?
 const mapSize = 20;
 // incrementor for subtractor when creatures are at border.
@@ -143,8 +144,8 @@ for (let i = 0; i < plantAmount; i += 1) {
   plants.push({
     positions: [((Math.random() * (mapSize * 2)) - mapSize) / 2,
       ((Math.random() * (mapSize * 2)) - mapSize) / 2, 0.1],
-    size: [(Math.random() * 0.1), (Math.random() * 0.1),
-      (Math.random() * 0.1)],
+    size: [(Math.random() * 0.03), (Math.random() * 0.03),
+      (Math.random() * 0.03)],
   });
 }
 /**
@@ -154,9 +155,11 @@ for (let i = 0; i < plantAmount; i += 1) {
  */
 let deathCount = 0;
 const creatures = [];
+
 export default function Env() {
   const [, setUpdate] = useState([0]);
   const [visibleVision, setVV] = useState(false);
+  const [mp, setMp] = useState(maxPop);
 
   /**
    * @func reproduce
@@ -165,7 +168,7 @@ export default function Env() {
   function reproduce(creature) {
     calculateFitness([creature]);
 
-    if (creatures.length < maxPop) {
+    if (creatures.length < mp) {
       const newCreat = pickOne([creature, creature]);
       newCreat.generation += 1;
       creatures.push(newCreat);
@@ -390,8 +393,17 @@ export default function Env() {
         ))}
         <Land />
       </Canvas>
-      <div className="gui-container" style={{ maxHeight: "20px" }}>
-        <Gui setVV={setVV} visibleVision={visibleVision} creatures={creatures} />
+      <div className="gui-container" style={{ maxHeight: '20px' }}>
+        <Gui
+          setVV={setVV}
+          visibleVision={visibleVision}
+          creatures={creatures}
+          maxPop={mp}
+          setMp={setMp}
+          population={creaturePopulation}
+          plantAmount={plantAmount}
+          creatSight={creatSight}
+        />
       </div>
     </div>
   );

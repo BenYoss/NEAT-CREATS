@@ -1,7 +1,10 @@
+/* eslint-disable no-param-reassign */
 import React, { useEffect } from 'react';
 import { Chart } from 'chart.js';
 
-export default function Gui({ setVV, visibleVision, creatures }) {
+export default function Gui({
+  setVV, visibleVision, creatures, plantAmount, creatSight, maxPop, population, setMp,
+}) {
   function chartIt(c) {
     const ctx = document.getElementById('chart').getContext('2d');
     const ctxd = document.getElementById('doughnut-chart').getContext('2d');
@@ -110,6 +113,24 @@ export default function Gui({ setVV, visibleVision, creatures }) {
   return (
     <div>
       <button type="button" onClick={() => { setVV(!visibleVision); }}>{visibleVision ? 'Show Sight: Enabled' : 'Show Sight: Disabled'}</button>
+      <section>
+        <button type="button" className="pop-button-pos" onClick={() => { setMp(maxPop += 1); }}>
+          +
+        </button>
+        <button type="button" className="pop">
+          Creature Max Population:
+          {maxPop}
+        </button>
+        <button type="button" className="pop-button-neg" onClick={() => { setMp(maxPop -= 1); }}>
+          -
+        </button>
+      </section>
+      <section>
+        <button type="button" className="population">
+          Creature Population:
+          {creatures.length}
+        </button>
+      </section>
       <div className="chart-container">
         <canvas id="chart" width="400" height="400" />
       </div>
