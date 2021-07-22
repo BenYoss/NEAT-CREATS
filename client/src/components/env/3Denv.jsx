@@ -1,26 +1,23 @@
 /* eslint-disable no-unused-vars */
-/* eslint-disable react/jsx-props-no-spreading */
 import React, { useEffect, useState } from 'react';
-import { Canvas, extend } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 // Drei helps with adding additional abstractions to the THREE.js environment.
 import { OrbitControls } from '@react-three/drei';
-import { Text } from 'troika-three-text';
-import fonts from '../helpers/fonts';
 // import the creature Neural Network into the 3D environment.
-import Creature from '../model-config/creature';
-import { pickOne, calculateFitness } from '../model-config/ga';
-import Gui from './Gui';
-import '../styles/style.scss';
+import Creature from '../../model-config/creature';
+import { pickOne, calculateFitness } from '../../model-config/ga';
+import Gui from '../gui/Gui';
+import { CreatureModel, Plant, Land } from './3DHelpers';
+import '../../styles/style.scss';
 
-extend({ Text });
 // How many creatures would start in this enviornment?
-let creaturePopulation = 50;
+const creaturePopulation = 50;
 // maximum population cap of creatures.
-let maxPop = 50;
+const maxPop = 50;
 // max number of plants
-let plantAmount = 1000;
+const plantAmount = 1000;
 // creature sight length
-let creatSight = 10;
+const creatSight = 10;
 // How big is the map?
 const mapSize = 20;
 // incrementor for subtractor when creatures are at border.
@@ -28,113 +25,6 @@ let inc = 0;
 // number of saved creatures.
 let savedCreatures = [];
 
-// text configuration options: for more information take a look at this github repo:
-const opts = {
-  font: 'Philosopher',
-  fontSize: 0.1,
-  color: '#99ccff',
-  maxWidth: 50,
-  lineHeight: 1,
-  letterSpacing: 0,
-  textAlign: 'justify',
-  materialType: 'MeshPhongMaterial',
-};
-
-/**
- * function: Creature
- * @func CreatureModel creates a mesh instance in the environment.
- */
-
-function CreatureModel(args) {
-  const arg = args;
-  return (
-    <>
-      {/* text to display names of creatures. */}
-      <text
-        position={[arg.positions[0], arg.positions[1], 0.2]}
-        {...opts}
-        text={arg.creature.name}
-        font={fonts[opts.font]}
-      >
-        {opts.materialType === 'MeshPhongMaterial' ? (
-          <meshPhongMaterial attach="material" color={opts.color} />
-        ) : null}
-      </text>
-      {/* creature mesh */}
-      <mesh
-        rotation={[0, 0, 0]}
-        scale={arg.size}
-        position={arg.positions}
-        onClick={() => { console.log(arg.creature); }}
-      >
-        <sphereGeometry attach="geometry" />
-        <meshStandardMaterial
-          attach="material"
-          color={arg.color}
-          transparent
-          opacity={0.6}
-        />
-      </mesh>
-      {/* mesh for creature sight radius */}
-      {arg.showVision && (
-        <mesh
-          rotation={[0, 0, 0]}
-          scale={[arg.size[0]
-            * (arg.creature.isCarn ? creatSight
-            + 1 : creatSight), arg.size[1]
-            * (arg.creature.isCarn ? (creatSight + 1) : creatSight), arg.size[2]]}
-          position={arg.positions}
-          onClick={() => { console.log(arg.creature); }}
-        >
-          <sphereGeometry attach="geometry" />
-          <meshStandardMaterial
-            attach="material"
-            color="red"
-            transparent
-            opacity={0.2}
-          />
-        </mesh>
-      )}
-    </>
-  );
-}
-
-/**
- * function: Plant
- * @func Plant creates a mesh instance in the environment.
- */
-function Plant(args) {
-  const arg = args;
-  return (
-    <mesh
-      rotation={[Math.random() * 2, Math.random() * 2, Math.random() * 2]}
-      position={arg.positions}
-      scale={arg.size}
-    >
-      <dodecahedronGeometry attach="geometry" />
-      <meshStandardMaterial
-        attach="material"
-        color="yellow"
-      />
-    </mesh>
-  );
-}
-// the 3D model that renders the land for the creatures.
-function Land() {
-  // sets the size of the land mass based on map size.
-  const s = mapSize;
-  return (
-    <>
-      <mesh rotation={[0, 0, 0]} position={[0, 0, 0]} scale={[s, s, s]}>
-        <planeGeometry attach="geometry" />
-        <meshPhongMaterial
-          attach="material"
-          color="green"
-        />
-      </mesh>
-    </>
-  );
-}
 // container for plants.
 const plants = [];
 
@@ -389,9 +279,10 @@ export default function Env() {
               creature.size / 2]}
             color={creature.isCarn ? 'red' : 'blue'}
             showVision={visibleVision}
+            creatSight={creatSight}
           />
         ))}
-        <Land />
+        <Land map={mapSize} />
       </Canvas>
       <div className="gui-container" style={{ maxHeight: '20px' }}>
         <Gui

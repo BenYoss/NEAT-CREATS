@@ -1,6 +1,5 @@
 /* eslint-disable no-param-reassign */
 /* eslint-disable consistent-return */
-// let m = new Matrix(3,2);
 
 class Matrix {
   constructor(rows, cols) {
