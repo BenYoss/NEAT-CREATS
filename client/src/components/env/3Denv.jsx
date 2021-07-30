@@ -259,7 +259,7 @@ export default function Env() {
     savedCreatures = [];
   }
   return (
-    <div style={{ height: window.innerHeight * 0.90, backgroundColor: 'black' }}>
+    <div style={{ height: window.innerHeight * 0.97, backgroundColor: 'black' }}>
       <Canvas camera={{ zoom: 60, position: [0, 20, 100] }}>
         <OrbitControls />
         <directionalLight intensity={0.5} />
@@ -284,7 +284,7 @@ export default function Env() {
         ))}
         <Land map={mapSize} />
       </Canvas>
-      <div className="gui-container" style={{ maxHeight: '20px' }}>
+      <div className="gui-container" style={{ maxHeight: '0px' }}>
         <Gui
           setVV={setVV}
           visibleVision={visibleVision}
