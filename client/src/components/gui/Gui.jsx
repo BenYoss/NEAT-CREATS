@@ -2,12 +2,13 @@
 import React, { useEffect } from 'react';
 import propTypes from 'prop-types';
 import { Chart } from 'chart.js';
+import ControlPanel from '../controls/ControlPanel';
 import chartData from './chartdata.json';
 
+let bool = false;
 export default function Gui({
   setVV, visibleVision, creatures, maxPop, setMp,
 }) {
-  let pop = maxPop;
   /**
    * @func chartIt:
    * chartIt renders data collected from the 3D environment and renders it on a chart.
@@ -69,32 +70,23 @@ export default function Gui({
   }
 
   useEffect(() => {
-    if (document.getElementById('chart')) {
-      chartIt(creatures);
+    if (document.getElementById('chart') && !bool) {
+      setInterval(() => {
+        chartIt(creatures);
+      }, 5000);
+      bool = true;
     }
   }, [chartIt, creatures]);
 
   return (
     <div>
-      <button type="button" onClick={() => { setVV(!visibleVision); }}>{visibleVision ? 'Show Sight: Enabled' : 'Show Sight: Disabled'}</button>
-      <section>
-        <button type="button" className="pop-button-pos" onClick={() => { setMp(pop += 1); }}>
-          +
-        </button>
-        <button type="button" className="pop">
-          Creature Max Population:
-          {maxPop}
-        </button>
-        <button type="button" className="pop-button-neg" onClick={() => { setMp(pop -= 1); }}>
-          -
-        </button>
-      </section>
-      <section>
-        <button type="button" className="population">
-          Creature Population:
-          {creatures.length}
-        </button>
-      </section>
+      <ControlPanel
+        setVV={setVV}
+        visibleVision={visibleVision}
+        maxPop={maxPop}
+        setMp={setMp}
+        creatures={creatures}
+      />
       <div className="chart-container">
         <canvas id="chart" width="400" height="400" />
       </div>
