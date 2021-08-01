@@ -88,7 +88,7 @@ export default function Gui({
         creatures={creatures}
       />
       <div className="chart-container">
-        <canvas id="chart" width="400" height="400" />
+        <canvas id="chart" />
       </div>
       <div className="dchart-container">
         <canvas id="doughnut-chart" width="100" height="100" />
