@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from 'react';
+import io from 'socket.io-client';
 import { Canvas } from '@react-three/fiber';
 // Drei helps with adding additional abstractions to the THREE.js environment.
 import { OrbitControls } from '@react-three/drei';
@@ -11,6 +12,7 @@ import { CreatureModel, Plant, Land } from './3DHelpers';
 import '../../styles/style.scss';
 
 // How many creatures would start in this enviornment?
+let socket;
 const creaturePopulation = 50;
 // maximum population cap of creatures.
 const maxPop = 50;
@@ -50,6 +52,16 @@ export default function Env() {
   const [, setUpdate] = useState([0]);
   const [visibleVision, setVV] = useState(false);
   const [mp, setMp] = useState(maxPop);
+
+  // SOCKET EMITTER
+  useEffect(() => {
+    socket = io();
+    socket.emit('join', { creatures }, () => {});
+    return () => {
+      socket.emit('disconnect');
+      socket.off();
+    };
+  }, [creatures]);
 
   /**
    * @func reproduce
@@ -131,6 +143,7 @@ export default function Env() {
       }
     }
   }
+
   useEffect(() => {
     populate();
   }, []);
