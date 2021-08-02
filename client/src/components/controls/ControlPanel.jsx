@@ -1,7 +1,7 @@
 import React from 'react';
 import propTypes from 'prop-types';
 import { Button } from '@material-ui/core';
-import { makeStyles, styled } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 /**
  * control helpers for when complex features are implemented.
  * @param {*} param0
@@ -9,7 +9,7 @@ import { makeStyles, styled } from '@material-ui/core/styles';
  */
 // import helpers from './control-helpers';
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles(() => ({
   btn: {
     fontSize: '1vw',
     // backgroundColor: 'blue',
