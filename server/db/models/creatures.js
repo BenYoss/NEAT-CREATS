@@ -40,13 +40,22 @@ const addCreature = ({
 };
 
 // kills a creature in the database.
-const killCreature = (id) => Creature.find({ id })
+const killCreature = (id) => Creature.find({ _id: id })
   .deleteOne().exec().catch((err) => console.error(err));
 
-const updateCreature = (id) => id;
+// updates a creature instance with new creature data.
+const updateCreature = (id, newCreature) => Creature.findOneAndUpdate({ _id: id },
+  { ...newCreature })
+  .exec().catch((err) => console.error(err));
+
+// get creatures from the database.
+const getCreatures = () => Creature.find()
+  .then((data) => data)
+  .catch((err) => console.error(err));
 
 module.exports = {
   addCreature,
   killCreature,
   updateCreature,
+  getCreatures,
 };
