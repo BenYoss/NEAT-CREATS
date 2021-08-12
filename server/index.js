@@ -22,7 +22,6 @@ io.on('connection', (socket) => {
   console.log('A new connection has been made!', socket.id);
   socket.on('join', (data) => {
     console.log(data.creatures[0]);
-    console.log(socket.id);
   });
   socket.on('addCreatures', (creatures) => {
     console.log(creatures);
