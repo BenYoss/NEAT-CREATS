@@ -5,7 +5,7 @@ import { Chart } from 'chart.js';
 import ControlPanel from '../controls/ControlPanel';
 import chartData from './chartdata.json';
 
-let bool = false;
+let counter = 0;
 export default function Gui({
   setVV, visibleVision, creatures, maxPop, setMp,
 }) {
@@ -15,6 +15,7 @@ export default function Gui({
    * @param {*} c
    * c are the creatures that exist in environment.
    */
+
   function chartIt(c) {
     const ctx = document.getElementById('chart').getContext('2d');
     const ctxd = document.getElementById('doughnut-chart').getContext('2d');
@@ -70,13 +71,12 @@ export default function Gui({
   }
 
   useEffect(() => {
-    if (document.getElementById('chart') && !bool) {
-      setInterval(() => {
-        chartIt(creatures);
-      }, 5000);
-      bool = true;
+    counter += 10;
+    if (counter === 1000) {
+      chartIt(creatures);
+      counter = 0;
     }
-  }, [chartIt, creatures]);
+  }, [creatures, counter]);
 
   return (
     <div>
