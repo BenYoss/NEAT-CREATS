@@ -93,7 +93,7 @@ class Matrix {
     // Scalar product
   }
 
-  map(func) {
+  map(func = (res) => res) {
     // Apply a function to every element of matrix
     for (let i = 0; i < this.rows; i += 1) {
       for (let j = 0; j < this.cols; j += 1) {
