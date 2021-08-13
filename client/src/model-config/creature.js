@@ -34,26 +34,26 @@ function carnProb(x, self) {
 }
 
 class Creature {
-  constructor(brain, index = 0) {
-    this.y = ((Math.random() * (40 * 2)) - 40) / 2;
-    this.x = ((Math.random() * (40 * 2)) - 40) / 2;
-    this.name = faker.name.findName();
+  constructor(brain, index = 0, options = {}) {
+    this.y = options.y || ((Math.random() * (40 * 2)) - 40) / 2;
+    this.x = options.x || ((Math.random() * (40 * 2)) - 40) / 2;
+    this.name = options.name || faker.name.findName();
     // locked plant/creat variables help the creature lock on a target.
-    this.lockedPlant = null;
-    this.lockedCreat = null;
+    this.lockedPlant = options.lockedPlant || null;
+    this.lockedCreat = options.lockedCreat || null;
     // who the parent creature is if reproduced.
-    this.parent = null;
+    this.parent = options.parent || null;
     // id of the creature.
-    this.index = index;
-    this.speed = 0.1;
+    this.index = options.index || index;
+    this.speed = options.speed || 0.1;
     // what generation is the child creature from.
-    this.generation = 0;
+    this.generation = options.generation || 0;
     // how long the creature will live (based on ticks)
-    this.lifeSpan = 1000;
+    this.lifeSpan = options.lifeSpan || 1000;
     // starting size of creature.
-    this.size = 0.05;
-    this.isCarn = false;
-    this.repCooldown = 0;
+    this.size = options.size || 0.05;
+    this.isCarn = options.isCarn || false;
+    this.repCooldown = options.repCooldown || 0;
     // inputs:
     /**
      * y location of creature
@@ -65,11 +65,11 @@ class Creature {
     if (brain) {
       this.brain = brain.copy();
     } else {
-      this.brain = new NeuralNetwork(4, 4, 3);
+      this.brain = options.brain || new NeuralNetwork(4, 4, 3);
     }
-    this.score = 0;
-    this.objective = 1;
-    this.fitness = 0;
+    this.score = options.score || 0;
+    this.objective = options.objective || 1;
+    this.fitness = options.fitness || 0;
   }
 
   mutate() {
