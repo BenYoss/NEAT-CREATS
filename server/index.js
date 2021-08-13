@@ -35,18 +35,23 @@ io.on('connection', (socket) => {
     }
     return false;
   });
+  // TODO: join functionality should include viewing creature information.
   socket.on('join', () => {
     socket.join('creats');
   });
+  // TODO: creatures should be persisted to database using mongoDB methods.
   socket.on('addCreatures', (creatures) => {
     console.log(creatures);
   });
+  // TODO: food should be persisted with mongoDB methods utilized.
   socket.on('addFood', (foods) => {
     console.log(foods);
   });
+  // TODO: should update the state of the creatures in the client.
   socket.on('updateState', (creatures) => {
     console.log(creatures);
   });
+
   socket.on('disconnec', () => {
     if (socket.id === firstUserId) {
       firstUserId = '';
