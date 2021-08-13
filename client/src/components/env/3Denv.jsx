@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from 'react';
 import io from 'socket.io-client';
@@ -6,16 +7,17 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 // import the creature Neural Network into the 3D environment.
 import Creature from '../../model-config/creature';
+import NeuralNetwork from '../../helpers/nn';
+import Helpers from '../../helpers/general_helpers';
 import { pickOne, calculateFitness } from '../../model-config/ga';
 import Gui from '../gui/Gui';
 import { CreatureModel, Plant, Land } from './3DHelpers';
 import '../../styles/style.scss';
 
 // How many creatures would start in this enviornment?
-let socket;
-const creaturePopulation = 50;
+const creaturePopulation = 10;
 // maximum population cap of creatures.
-const maxPop = 50;
+const maxPop = 5;
 // max number of plants
 const plantAmount = 1000;
 // creature sight length
@@ -29,6 +31,7 @@ let savedCreatures = [];
 
 // container for plants.
 const plants = [];
+const socket = io();
 
 // for when plants start spawning.
 for (let i = 0; i < plantAmount; i += 1) {
@@ -46,22 +49,43 @@ for (let i = 0; i < plantAmount; i += 1) {
  * contained within the environment scope.
  */
 let deathCount = 0;
-const creatures = [];
+let creatures = [];
 
 export default function Env() {
   const [, setUpdate] = useState([0]);
   const [visibleVision, setVV] = useState(false);
   const [mp, setMp] = useState(maxPop);
 
-  // SOCKET EMITTER
+  // SOCKET OPERATIONS
   useEffect(() => {
-    socket = io();
-    socket.emit('join', { creatures }, () => {});
+    // testing join emitter
+    socket.emit('join', { }, () => {
+    });
+    // TODO: when creature information updates, updateCreatures.
+    socket.on('updateCreatures', (newCreatures) => {
+      creatures = newCreatures.creatures.creatures.map((creat) => {
+        const newCreat = new Creature(new NeuralNetwork(
+          creat.brain.input_nodes, creat.brain.hidden_nodes, creat.brain.output_nodes,
+        ),
+        undefined, creat);
+        newCreat.isChanged = true;
+        return newCreat;
+      });
+    });
+    // setInterval(() => {
+    //   if (socket.emit('isFirstUser')) {
+    //     isFirstUser = true;
+    //   }
+    // }, 50);
+    setInterval(() => {
+      socket.emit('saveCreatures', { creatures });
+      console.log('Creatures saved!');
+    }, 10000);
     return () => {
-      socket.emit('disconnect');
+      socket.emit('disconnec');
       socket.off();
     };
-  }, [creatures]);
+  }, []);
 
   /**
    * @func reproduce
@@ -107,7 +131,6 @@ export default function Env() {
       creatures[j].update();
     }
   }
-
   /**
    * @func isCloser
    *    Adds a reward system to detect if a creature is closer or farther to food/creature.
@@ -147,6 +170,7 @@ export default function Env() {
   useEffect(() => {
     populate();
   }, []);
+
   creatures.forEach((creature, k) => {
     // updates creature and makes new decisions.
     const creat = creature;
@@ -240,6 +264,7 @@ export default function Env() {
       deathCount += 1;
     }
   });
+  socket.emit('showCreatures', { creatures });
   let timer;
   let repopulator;
   let counter;
@@ -248,7 +273,7 @@ export default function Env() {
     if (deathCount !== creatures.length && creatures.length > 1 && !timer) {
       timer = setInterval(() => {
         setUpdate([]);
-      }, 1);
+      }, 50);
     }
     repopulator = setInterval(() => {
       repopulate();
