@@ -10,6 +10,8 @@ const PORT = 8080;
 const app = express();
 const server = require('http').createServer(app);
 
+let firstUserId = '';
+
 const io = socketio(server);
 // app configurations
 app.use(express.json());
@@ -18,10 +20,23 @@ app.get('*', (req, res) => {
   res.sendFile(path.resolve('./client', 'dist/index.html'));
 });
 
+// Socket operations
 io.on('connection', (socket) => {
   console.log('A new connection has been made!', socket.id);
-  socket.on('join', (data) => {
-    console.log(data.creatures[0]);
+  if (!firstUserId.length) {
+    firstUserId = socket.id;
+  }
+  socket.on('showCreatures', (creatures) => {
+    socket.to('creats').emit('updateCreatures', { creatures, id: socket.id });
+  });
+  socket.on('isFirstUser', () => {
+    if (socket.id === firstUserId) {
+      return true;
+    }
+    return false;
+  });
+  socket.on('join', () => {
+    socket.join('creats');
   });
   socket.on('addCreatures', (creatures) => {
     console.log(creatures);
@@ -32,7 +47,10 @@ io.on('connection', (socket) => {
   socket.on('updateState', (creatures) => {
     console.log(creatures);
   });
-  socket.on('disconnect', () => {
+  socket.on('disconnec', () => {
+    if (socket.id === firstUserId) {
+      firstUserId = '';
+    }
     console.log('LEFT');
   });
 });
