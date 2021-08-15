@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 require('dotenv').config();
 require('./db/index');
 
@@ -9,8 +10,11 @@ const socketio = require('socket.io');
 const PORT = 8080;
 const app = express();
 const server = require('http').createServer(app);
+const {
+  addUser, killUser, updateUser, getUser, clearUsers,
+} = require('./db/models/user');
 
-let firstUserId = '';
+let firstUserId;
 
 const io = socketio(server);
 // app configurations
@@ -19,25 +23,61 @@ app.use(express.static(path.resolve('./client', 'dist')));
 app.get('*', (req, res) => {
   res.sendFile(path.resolve('./client', 'dist/index.html'));
 });
-
 // Socket operations
-io.on('connection', (socket) => {
-  console.log('A new connection has been made!', socket.id);
-  if (!firstUserId.length) {
-    firstUserId = socket.id;
-  }
+io.on('connection', async (socket) => {
+  /**
+   * @function findFirstUser:
+   * Async function that searchs for the first user from the list of
+   * users in the database.
+   */
+  const findFirstUser = async () => {
+    // fetch dataset of users from database
+    firstUserId = await getUser().catch((err) => console.error(err));
+    let bool = false;
+    // id of the user
+    let myId;
+    // what will be the id of the first user
+    let firstId;
+    firstUserId.forEach((user) => {
+      // if the user's already first.
+      if (user.isFirst) {
+        bool = true;
+        firstId = user.idUser;
+      }
+      // if the user is the current user on the site.
+      if (user.idUser === socket.id) {
+        myId = user._id;
+      }
+    });
+    // if there aren't any first users, the next user in the database will be first.
+    if (!bool) {
+      await updateUser(myId, true);
+      findFirstUser();
+    } else {
+      firstUserId = firstId;
+    }
+  };
+
+  // adds a new user to the database.
+  await addUser(socket.id).catch((err) => console.error(err));
+  // function call
+  findFirstUser();
+  // TODO: dynamically update creature data from all clients.
   socket.on('showCreatures', (creatures) => {
     socket.to('creats').emit('updateCreatures', { creatures, id: socket.id });
   });
   socket.on('isFirstUser', () => {
     if (socket.id === firstUserId) {
-      return true;
+      socket.emit('firstResponse', true);
     }
-    return false;
+    socket.emit('firstResponse', false);
   });
   // TODO: join functionality should include viewing creature information.
   socket.on('join', () => {
     socket.join('creats');
+  });
+  socket.on('saveCreatures', async () => {
+    findFirstUser();
   });
   // TODO: creatures should be persisted to database using mongoDB methods.
   socket.on('addCreatures', (creatures) => {
@@ -52,11 +92,12 @@ io.on('connection', (socket) => {
     console.log(creatures);
   });
 
-  socket.on('disconnec', () => {
-    if (socket.id === firstUserId) {
-      firstUserId = '';
+  // When the user disconnects, the user's record will be wiped.
+  socket.on('disconnect', async () => {
+    await killUser(firstUserId);
+    if (!Object.keys(io.engine.clients).length) {
+      await clearUsers();
     }
-    console.log('LEFT');
   });
 });
 // server listener to start server.
