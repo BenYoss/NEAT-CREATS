@@ -1,19 +1,23 @@
+/* eslint-disable no-underscore-dangle */
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from 'react';
+import io from 'socket.io-client';
 import { Canvas } from '@react-three/fiber';
 // Drei helps with adding additional abstractions to the THREE.js environment.
 import { OrbitControls } from '@react-three/drei';
 // import the creature Neural Network into the 3D environment.
 import Creature from '../../model-config/creature';
+import NeuralNetwork from '../../helpers/nn';
+import Helpers from '../../helpers/general_helpers';
 import { pickOne, calculateFitness } from '../../model-config/ga';
 import Gui from '../gui/Gui';
 import { CreatureModel, Plant, Land } from './3DHelpers';
 import '../../styles/style.scss';
 
 // How many creatures would start in this enviornment?
-const creaturePopulation = 50;
+const creaturePopulation = 10;
 // maximum population cap of creatures.
-const maxPop = 50;
+const maxPop = 5;
 // max number of plants
 const plantAmount = 1000;
 // creature sight length
@@ -24,9 +28,11 @@ const mapSize = 20;
 let inc = 0;
 // number of saved creatures.
 let savedCreatures = [];
+let isFirst = false;
 
 // container for plants.
 const plants = [];
+const socket = io();
 
 // for when plants start spawning.
 for (let i = 0; i < plantAmount; i += 1) {
@@ -44,12 +50,46 @@ for (let i = 0; i < plantAmount; i += 1) {
  * contained within the environment scope.
  */
 let deathCount = 0;
-const creatures = [];
+let creatures = [];
 
 export default function Env() {
   const [, setUpdate] = useState([0]);
   const [visibleVision, setVV] = useState(false);
   const [mp, setMp] = useState(maxPop);
+
+  // SOCKET OPERATIONS
+  useEffect(() => {
+    // testing join emitter
+    socket.emit('join', { }, () => {
+    });
+    // TODO: when creature information updates, updateCreatures.
+    socket.on('updateCreatures', (newCreatures) => {
+      creatures = newCreatures.creatures.creatures.map((creat) => {
+        const newCreat = new Creature(new NeuralNetwork(
+          creat.brain.input_nodes, creat.brain.hidden_nodes, creat.brain.output_nodes,
+        ),
+        undefined, creat);
+        newCreat.isChanged = true;
+        return newCreat;
+      });
+    });
+    // response from the isFirstUser emitter.
+    socket.on('firstResponse', (bool) => {
+      if (bool) {
+        isFirst = true;
+      }
+    });
+    setInterval(() => {
+      socket.emit('isFirstUser');
+      // TODO: save creatures to the database.
+      socket.emit('saveCreatures', { creatures });
+    }, 10000);
+    return () => {
+      // disconnect from page when user leaves site.
+      socket.emit('disconnect');
+      socket.off();
+    };
+  }, []);
 
   /**
    * @func reproduce
@@ -95,7 +135,6 @@ export default function Env() {
       creatures[j].update();
     }
   }
-
   /**
    * @func isCloser
    *    Adds a reward system to detect if a creature is closer or farther to food/creature.
@@ -131,102 +170,108 @@ export default function Env() {
       }
     }
   }
+
   useEffect(() => {
     populate();
   }, []);
-  creatures.forEach((creature, k) => {
-    // updates creature and makes new decisions.
-    const creat = creature;
-    const upCreat = creat;
-    if (creat.lifeSpan > 0) {
-      const prevX = creat.x;
-      const prevY = creat.y;
-      // sets hold only unique properties.
-      const plantObs = new Set();
-      const creatObs = new Set();
-      const prevStep = { x: creat.x, y: creat.y };
-      creat.think();
-      creat.update();
-      // for when the creature goes beyond the border.
-      if (creat.x > mapSize || creat.x < -mapSize) {
-        upCreat.x = prevX;
-        upCreat.lifeSpan -= 1;
-      }
-      if (creat.y > mapSize || creat.y < -mapSize) {
-        upCreat.y = prevY;
-        if (upCreat.lifeSpan > 0) {
+
+  // If the user is the first user, the code below will fire.
+  if (isFirst) {
+    creatures.forEach((creature, k) => {
+      // updates creature and makes new decisions.
+      const creat = creature;
+      const upCreat = creat;
+      if (creat.lifeSpan > 0) {
+        const prevX = creat.x;
+        const prevY = creat.y;
+        // sets hold only unique properties.
+        const plantObs = new Set();
+        const creatObs = new Set();
+        const prevStep = { x: creat.x, y: creat.y };
+        creat.think();
+        creat.update();
+        // for when the creature goes beyond the border.
+        if (creat.x > mapSize || creat.x < -mapSize) {
+          upCreat.x = prevX;
           upCreat.lifeSpan -= 1;
         }
-        upCreat.score = 0;
-        inc += 1;
-      }
-      // when the creature is carnivorous.
-      if (creat.isCarn) {
-        creatures.forEach((c, i) => {
-          if (c.x >= ((creat.x) - (creat.size
-            * (creat.isCarn ? creatSight : creatSight / 2)))
-          && c.x <= ((creat.x) + (creat.size
-              * (creat.isCarn ? creatSight : creatSight / 2)))
-          && c.y >= ((creat.y) - (creat.size
-              * (creat.isCarn ? creatSight : creatSight / 2)))
-          && c.y <= ((creat.y) + (creat.size
-              * (creat.isCarn ? creatSight : creatSight / 2)))) {
-            creatObs.add(c);
+        if (creat.y > mapSize || creat.y < -mapSize) {
+          upCreat.y = prevY;
+          if (upCreat.lifeSpan > 0) {
+            upCreat.lifeSpan -= 1;
           }
-          if (c.x >= ((creat.x / 2) - (creat.size / 2))
-          && c.x <= ((creat.x / 2) + (creat.size / 2))
-          && c.y >= ((creat.y / 2) - (creat.size / 2))
-          && c.y <= ((creat.y / 2) + (creat.size / 2))) {
-            console.log(`creature ${k} ate creature ${i}!!`);
-            creat.score += c.score;
-            creat.lifeSpan += c.lifeSpan;
-            creat.size += c.size;
-            savedCreatures.push(creatures.splice(i, 1));
-          }
-        });
-      }
-      plants.forEach((plant, p) => {
-        if (plant.positions[0] >= ((creat.x) - (creat.size
-          * (creat.isCarn ? creatSight : creatSight / 2)))
-        && plant.positions[0] <= ((creat.x) + (creat.size
-            * (creat.isCarn ? creatSight : creatSight / 2)))
-        && plant.positions[1] >= ((creat.y) - (creat.size
-            * (creat.isCarn ? creatSight : creatSight / 2)))
-        && plant.positions[1] <= ((creat.y) + (creat.size
-            * (creat.isCarn ? creatSight : creatSight / 2)))) {
-          plantObs.add(plant);
+          upCreat.score = 0;
+          inc += 1;
         }
-        if (plant.positions[0] >= ((creat.x / 2) - (creat.size / 2))
-        && plant.positions[0] <= ((creat.x / 2) + (creat.size / 2))
-        && plant.positions[1] >= ((creat.y / 2) - (creat.size / 2))
-        && plant.positions[1] <= ((creat.y / 2) + (creat.size / 2))) {
-          creat.score = 0.3;
-          creat.lockedPlant = null;
-          creat.lifeSpan += 400;
-          creat.size += 0.01;
-          // creat.speed -= 0.0002;
-          reproduce(creat);
-          plants.splice(p, 1);
-          plants.push({
-            positions: [((Math.random() * (mapSize * 2)) - mapSize) / 2,
-              ((Math.random() * (mapSize * 2)) - mapSize) / 2, 0.1],
-            size: [(Math.random() * 0.05), (Math.random() * 0.05),
-              (Math.random() * 0.05)],
+        // when the creature is carnivorous.
+        if (creat.isCarn) {
+          creatures.forEach((c, i) => {
+            if (c.x >= ((creat.x) - (creat.size
+              * (creat.isCarn ? creatSight : creatSight / 2)))
+            && c.x <= ((creat.x) + (creat.size
+                * (creat.isCarn ? creatSight : creatSight / 2)))
+            && c.y >= ((creat.y) - (creat.size
+                * (creat.isCarn ? creatSight : creatSight / 2)))
+            && c.y <= ((creat.y) + (creat.size
+                * (creat.isCarn ? creatSight : creatSight / 2)))) {
+              creatObs.add(c);
+            }
+            if (c.x >= ((creat.x / 2) - (creat.size / 2))
+            && c.x <= ((creat.x / 2) + (creat.size / 2))
+            && c.y >= ((creat.y / 2) - (creat.size / 2))
+            && c.y <= ((creat.y / 2) + (creat.size / 2))) {
+              console.log(`creature ${k} ate creature ${i}!!`);
+              creat.score += c.score;
+              creat.lifeSpan += c.lifeSpan;
+              creat.size += c.size;
+              savedCreatures.push(creatures.splice(i, 1));
+            }
           });
         }
-      });
+        plants.forEach((plant, p) => {
+          if (plant.positions[0] >= ((creat.x) - (creat.size
+            * (creat.isCarn ? creatSight : creatSight / 2)))
+          && plant.positions[0] <= ((creat.x) + (creat.size
+              * (creat.isCarn ? creatSight : creatSight / 2)))
+          && plant.positions[1] >= ((creat.y) - (creat.size
+              * (creat.isCarn ? creatSight : creatSight / 2)))
+          && plant.positions[1] <= ((creat.y) + (creat.size
+              * (creat.isCarn ? creatSight : creatSight / 2)))) {
+            plantObs.add(plant);
+          }
+          if (plant.positions[0] >= ((creat.x / 2) - (creat.size / 2))
+          && plant.positions[0] <= ((creat.x / 2) + (creat.size / 2))
+          && plant.positions[1] >= ((creat.y / 2) - (creat.size / 2))
+          && plant.positions[1] <= ((creat.y / 2) + (creat.size / 2))) {
+            creat.score = 0.3;
+            creat.lockedPlant = null;
+            creat.lifeSpan += 400;
+            creat.size += 0.01;
+            // creat.speed -= 0.0002;
+            reproduce(creat);
+            plants.splice(p, 1);
+            plants.push({
+              positions: [((Math.random() * (mapSize * 2)) - mapSize) / 2,
+                ((Math.random() * (mapSize * 2)) - mapSize) / 2, 0.1],
+              size: [(Math.random() * 0.05), (Math.random() * 0.05),
+                (Math.random() * 0.05)],
+            });
+          }
+        });
 
-      if (!creat.isCarn) {
-        isCloser(creat, prevStep, plantObs.values().next().value);
+        if (!creat.isCarn) {
+          isCloser(creat, prevStep, plantObs.values().next().value);
+        } else {
+          isCloser(creat, prevStep, creatObs.values().next().value);
+        }
       } else {
-        isCloser(creat, prevStep, creatObs.values().next().value);
+        savedCreatures.push(creatures.splice(k, 1)[0]);
+        savedCreatures[savedCreatures.length - 1].lifeSpan = 100;
+        deathCount += 1;
       }
-    } else {
-      savedCreatures.push(creatures.splice(k, 1)[0]);
-      savedCreatures[savedCreatures.length - 1].lifeSpan = 100;
-      deathCount += 1;
-    }
-  });
+    });
+    socket.emit('showCreatures', { creatures });
+  }
   let timer;
   let repopulator;
   let counter;
@@ -235,7 +280,7 @@ export default function Env() {
     if (deathCount !== creatures.length && creatures.length > 1 && !timer) {
       timer = setInterval(() => {
         setUpdate([]);
-      }, 1);
+      }, 50);
     }
     repopulator = setInterval(() => {
       repopulate();
