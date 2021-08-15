@@ -41,10 +41,10 @@ export default function Gui({
     const chart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: [...names],
+        labels: [...names || 'Empty'],
         datasets: [{
           label: 'Creature Sizes',
-          data: [...lifespans],
+          data: [...lifespans || 'Empty'],
           backgroundColor: chartData[0].backgroundColor,
           borderColor: chartData[0].borderColor,
           borderWidth: 1,
