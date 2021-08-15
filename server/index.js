@@ -7,7 +7,7 @@ const path = require('path');
 const socketio = require('socket.io');
 
 // server PORT - will add a environmental variable later.
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 const app = express();
 const server = require('http').createServer(app);
 const {
