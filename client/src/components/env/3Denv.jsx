@@ -31,19 +31,9 @@ let savedCreatures = [];
 let isFirst = false;
 
 // container for plants.
-const plants = [];
+let plants = [];
 const socket = io();
 
-// for when plants start spawning.
-for (let i = 0; i < plantAmount; i += 1) {
-// generates random positions for the plants to spawn.
-  plants.push({
-    positions: [((Math.random() * (mapSize * 2)) - mapSize) / 2,
-      ((Math.random() * (mapSize * 2)) - mapSize) / 2, 0.1],
-    size: [(Math.random() * 0.03), (Math.random() * 0.03),
-      (Math.random() * 0.03)],
-  });
-}
 /**
  * @func Env is a react component that handles the WebGL environment using THREE.js
  * has directional lighting, orbit controls to control movement, and meshes
@@ -73,6 +63,11 @@ export default function Env() {
         return newCreat;
       });
     });
+
+    // TODO: plants should update when new plant data is processed from firstUser
+    socket.on('updatePlant', (newPlants) => {
+      plants = [...newPlants];
+    });
     // response from the isFirstUser emitter.
     socket.on('firstResponse', (bool) => {
       if (bool) {
@@ -90,6 +85,21 @@ export default function Env() {
       socket.off();
     };
   }, []);
+
+  useEffect(() => {
+    // for when plants start spawning.
+    if (isFirst) {
+      for (let i = 0; i < plantAmount; i += 1) {
+        // generates random positions for the plants to spawn.
+        plants.push({
+          positions: [((Math.random() * (mapSize * 2)) - mapSize) / 2,
+            ((Math.random() * (mapSize * 2)) - mapSize) / 2, 0.1],
+          size: [(Math.random() * 0.03), (Math.random() * 0.03),
+            (Math.random() * 0.03)],
+        });
+      }
+    }
+  }, [isFirst]);
 
   /**
    * @func reproduce
@@ -271,6 +281,7 @@ export default function Env() {
       }
     });
     socket.emit('showCreatures', { creatures });
+    socket.emit('showPlants', { plants });
   }
   let timer;
   let repopulator;

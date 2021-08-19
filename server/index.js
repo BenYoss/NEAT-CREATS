@@ -66,6 +66,9 @@ io.on('connection', async (socket) => {
   socket.on('showCreatures', (creatures) => {
     socket.to('creats').emit('updateCreatures', { creatures, id: socket.id });
   });
+  socket.on('showPlants', (plants) => {
+    socket.to('creats').emit('updatePlants', { plants, id: socket.id });
+  });
   socket.on('isFirstUser', () => {
     if (socket.id === firstUserId) {
       socket.emit('firstResponse', true);
