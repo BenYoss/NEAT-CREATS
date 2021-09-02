@@ -19,11 +19,11 @@ const creaturePopulation = 10;
 // maximum population cap of creatures.
 const maxPop = 5;
 // max number of plants
-const plantAmount = 1000;
+const plantAmount = 100;
 // creature sight length
 const creatSight = 10;
 // How big is the map?
-const mapSize = 20;
+const mapSize = 5;
 // incrementor for subtractor when creatures are at border.
 let inc = 0;
 // number of saved creatures.
@@ -32,6 +32,9 @@ let isFirst = false;
 
 // container for plants.
 let plants = [];
+let timer;
+let repopulator;
+let counter;
 const socket = io();
 
 /**
@@ -57,7 +60,7 @@ export default function Env() {
       creatures = newCreatures.creatures.creatures.map((creat) => {
         const newCreat = new Creature(new NeuralNetwork(
           creat.brain.input_nodes, creat.brain.hidden_nodes, creat.brain.output_nodes,
-        ),
+        ), mapSize,
         undefined, creat);
         newCreat.isChanged = true;
         return newCreat;
@@ -65,15 +68,26 @@ export default function Env() {
     });
 
     // TODO: plants should update when new plant data is processed from firstUser
-    socket.on('updatePlant', (newPlants) => {
-      plants = [...newPlants];
+    socket.on('updatePlants', (newPlants) => {
+      plants = [...newPlants.plants.plants];
+    });
+    socket.on('chunkEnterResponse', (envData) => {
+      if (isFirst) {
+        if (!creatures.length || !plants.length) {
+          creatures = envData.creatures;
+          plants = envData.plants;
+        }
+      }
+      setUpdate([]);
     });
     // response from the isFirstUser emitter.
     socket.on('firstResponse', (bool) => {
       if (bool) {
         isFirst = true;
       }
+      socket.emit('chunkEnter');
     });
+    socket.emit('isFirstUser');
     setInterval(() => {
       socket.emit('isFirstUser');
       // TODO: save creatures to the database.
@@ -86,9 +100,9 @@ export default function Env() {
     };
   }, []);
 
-  useEffect(() => {
-    // for when plants start spawning.
-    if (isFirst) {
+  if (isFirst) {
+    console.log(plants.length);
+    if (!plants.length) {
       for (let i = 0; i < plantAmount; i += 1) {
         // generates random positions for the plants to spawn.
         plants.push({
@@ -99,7 +113,7 @@ export default function Env() {
         });
       }
     }
-  }, [isFirst]);
+  }
 
   /**
    * @func reproduce
@@ -124,7 +138,7 @@ export default function Env() {
 
     if (creatures.length < creaturePopulation) {
       // const creature = pickOne(savedCreatures);
-      const creature = new Creature(null, creatures.length - 1);
+      const creature = new Creature(null, mapSize, creatures.length - 1);
       creature.think();
       creature.update();
       creatures.push(creature);
@@ -138,7 +152,7 @@ export default function Env() {
    */
   function populate() {
     for (let j = 0; j < creaturePopulation; j += 1) {
-      creatures.push(new Creature(null, j));
+      creatures.push(new Creature(null, mapSize, j));
       // think helps creature make a new decision
       creatures[j].think();
       // update updates the creature's state.
@@ -172,7 +186,6 @@ export default function Env() {
       const lp = creat.lockedPlant;
       if (creat.x - lp.positions[0] > prevCreat.x - lp.positions[0]) {
         creat.score += 0.1;
-        // console.log(creat.x, prevCreat.x);
       } else if (creat.y - lp.positions[1] > prevCreat.y - lp.positions[1]) {
         creat.score += 0.1;
       } else {
@@ -181,9 +194,11 @@ export default function Env() {
     }
   }
 
-  useEffect(() => {
-    populate();
-  }, []);
+  if (isFirst) {
+    if (!creatures.length) {
+      populate();
+    }
+  }
 
   // If the user is the first user, the code below will fire.
   if (isFirst) {
@@ -283,19 +298,18 @@ export default function Env() {
     socket.emit('showCreatures', { creatures });
     socket.emit('showPlants', { plants });
   }
-  let timer;
-  let repopulator;
-  let counter;
-  useEffect(() => {
-    // to continue with the interval times until all creatures die.
-    if (deathCount !== creatures.length && creatures.length > 1 && !timer) {
-      timer = setInterval(() => {
-        setUpdate([]);
-      }, 50);
-    }
+
+  if (deathCount !== creatures.length && creatures.length > 1 && !timer) {
+    timer = setInterval(() => {
+      setUpdate([]);
+    }, 50);
+  }
+  if (!repopulator) {
     repopulator = setInterval(() => {
       repopulate();
     }, 1000);
+  }
+  if (!counter) {
     counter = setInterval(() => {
       creatures.forEach((cc) => {
         const c = cc;
@@ -307,6 +321,10 @@ export default function Env() {
         }
       });
     }, 1000);
+  }
+
+  useEffect(() => {
+    // to continue with the interval times until all creatures die.
   }, []);
   // when all creatures die, the environment re-populates.
   if (deathCount === creaturePopulation) {
