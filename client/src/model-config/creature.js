@@ -34,9 +34,9 @@ function carnProb(x, self) {
 }
 
 class Creature {
-  constructor(brain, index = 0, options = {}) {
-    this.y = options.y || ((Math.random() * (40 * 2)) - 40) / 2;
-    this.x = options.x || ((Math.random() * (40 * 2)) - 40) / 2;
+  constructor(brain, map, index = 0, options = {}) {
+    this.y = options.y || ((Math.random() * (map * 4)) - (map * 2)) / 2;
+    this.x = options.x || ((Math.random() * (map * 4)) - (map * 2)) / 2;
     this.name = options.name || faker.name.findName();
     // locked plant/creat variables help the creature lock on a target.
     this.lockedPlant = options.lockedPlant || null;
