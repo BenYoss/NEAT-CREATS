@@ -11,8 +11,8 @@ const PORT = process.env.PORT || 8080;
 const app = express();
 const server = require('http').createServer(app);
 const {
-  addUser, killUser, updateUser, getUser, clearUsers,
-} = require('./db/models/user');
+  User, Creature, Plant,
+} = require('./db/models/models');
 
 let firstUserId;
 
@@ -32,7 +32,7 @@ io.on('connection', async (socket) => {
    */
   const findFirstUser = async () => {
     // fetch dataset of users from database
-    firstUserId = await getUser().catch((err) => console.error(err));
+    firstUserId = await User.getUser().catch((err) => console.error(err));
     let bool = false;
     // id of the user
     let myId;
@@ -51,15 +51,15 @@ io.on('connection', async (socket) => {
     });
     // if there aren't any first users, the next user in the database will be first.
     if (!bool) {
-      await updateUser(myId, true);
+      await User.updateUser(myId, true);
       findFirstUser();
+      firstUserId = myId;
     } else {
       firstUserId = firstId;
     }
   };
-
   // adds a new user to the database.
-  await addUser(socket.id).catch((err) => console.error(err));
+  await User.addUser(socket.id).catch((err) => console.error(err));
   // function call
   findFirstUser();
   // TODO: dynamically update creature data from all clients.
@@ -72,9 +72,22 @@ io.on('connection', async (socket) => {
   socket.on('isFirstUser', () => {
     if (socket.id === firstUserId) {
       socket.emit('firstResponse', true);
+    } else {
+      socket.emit('firstResponse', false);
     }
-    socket.emit('firstResponse', false);
   });
+  // TODO: when a user enters the chunk, all creatures/plants in the chunk will render.
+
+  // TODO: when a creature reaches the edge of the chunk, it will move to a new chunk.
+
+  // TODO: when a user enters a chunk, the chunk will render.
+
+  socket.on('chunkEnter', async () => {
+    const creatures = await Creature.getCreatures();
+    const plants = await Plant.getPlants();
+    socket.emit('chunkEnterResponse', { creatures, plants });
+  });
+
   // TODO: join functionality should include viewing creature information.
   socket.on('join', () => {
     socket.join('creats');
@@ -83,12 +96,18 @@ io.on('connection', async (socket) => {
     findFirstUser();
   });
   // TODO: creatures should be persisted to database using mongoDB methods.
-  socket.on('addCreatures', (creatures) => {
-    console.log(creatures);
+  socket.on('addCreatures', async (creatures) => {
+    const addCreatures = creatures.map((creat) => new Promise((res) => {
+      res(Creature.addCreature(creat));
+    }));
+    await Promise.all(addCreatures);
   });
   // TODO: food should be persisted with mongoDB methods utilized.
-  socket.on('addFood', (foods) => {
-    console.log(foods);
+  socket.on('addFood', async (foods) => {
+    const addPlants = foods.map((food) => new Promise((res) => {
+      res(Plant.addPlant(food));
+    }));
+    await Promise.all(addPlants);
   });
   // TODO: should update the state of the creatures in the client.
   socket.on('updateState', (creatures) => {
@@ -97,9 +116,9 @@ io.on('connection', async (socket) => {
 
   // When the user disconnects, the user's record will be wiped.
   socket.on('disconnect', async () => {
-    await killUser(firstUserId);
+    await User.killUser(firstUserId);
     if (!Object.keys(io.engine.clients).length) {
-      await clearUsers();
+      await User.clearUsers();
     }
   });
 });
