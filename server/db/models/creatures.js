@@ -2,7 +2,7 @@ require('../index');
 const mongoose = require('mongoose');
 
 // The schema for the creature model.
-const creatureSchema = mongoose.Schema({
+const creatureSchema = new mongoose.Schema({
   name: String,
   id: Number,
   posx: Number,
@@ -14,7 +14,7 @@ const creatureSchema = mongoose.Schema({
 });
 
 // creating a new mongoose model instance for creature.
-const Creature = new mongoose.Model(creatureSchema);
+const Creature = mongoose.model('Creature', creatureSchema);
 
 // adds a creature to the database.
 const addCreature = ({
