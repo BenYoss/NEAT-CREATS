@@ -116,6 +116,13 @@ export function Land({ map }) {
           color="green"
         />
       </mesh>
+      <mesh rotation={[0, 0, 0]} position={[0, 0, -2.57]} scale={[s, s, s]}>
+        <boxGeometry attach="geometry" />
+        <meshPhongMaterial
+          attach="material"
+          color="gray"
+        />
+      </mesh>
     </>
   );
 }

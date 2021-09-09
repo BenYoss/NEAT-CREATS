@@ -27,7 +27,16 @@ export async function updateCreature(creatData, id) {
   console.log(data, 'resulting flag for put');
 }
 
+/**
+ * @function deleteCreature()
+ * deletes a creature from the database based on a
+ * specified name.
+ * @param {*} id
+ */
 export async function deleteCreature(id) {
-  const { data } = await axios.put('/data/creature', { id });
-  console.log(data, 'resulting flag for delete');
+  await axios.put('/data/creature', { id }).catch((err) => console.error(err));
+}
+
+export async function deletePlant(id) {
+  await axios.put('/data/plants', { id }).catch((err) => console.error(err));
 }

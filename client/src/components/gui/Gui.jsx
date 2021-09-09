@@ -25,8 +25,8 @@ export default function Gui({
     let herbs = 0;
     if (c.length) {
       for (let i = 0; i < 10; i += 1) {
-        names.push(c[i].name);
-        lifespans.push(c[i].size);
+        names.push(c[i] ? c[i].name : 'None');
+        lifespans.push(c[i] ? c[i].size : 'None');
       }
       c.forEach((creat) => {
         if (creat.isCarn) {

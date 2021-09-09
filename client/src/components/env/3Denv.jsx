@@ -8,7 +8,7 @@ import { OrbitControls } from '@react-three/drei';
 // import the creature Neural Network into the 3D environment.
 import Creature from '../../model-config/creature';
 import NeuralNetwork from '../../helpers/nn';
-import Helpers from '../../helpers/general_helpers';
+import { deleteCreature } from '../../helpers/general_helpers';
 import { pickOne, calculateFitness } from '../../model-config/ga';
 import Gui from '../gui/Gui';
 import { CreatureModel, Plant, Land } from './3DHelpers';
@@ -19,11 +19,11 @@ const creaturePopulation = 10;
 // maximum population cap of creatures.
 const maxPop = 5;
 // max number of plants
-const plantAmount = 1000;
+const plantAmount = 100;
 // creature sight length
 const creatSight = 10;
 // How big is the map?
-const mapSize = 20;
+const mapSize = 5;
 // incrementor for subtractor when creatures are at border.
 let inc = 0;
 // number of saved creatures.
@@ -31,19 +31,12 @@ let savedCreatures = [];
 let isFirst = false;
 
 // container for plants.
-const plants = [];
+let plants = [];
+let timer;
+let repopulator;
+let counter;
 const socket = io();
 
-// for when plants start spawning.
-for (let i = 0; i < plantAmount; i += 1) {
-// generates random positions for the plants to spawn.
-  plants.push({
-    positions: [((Math.random() * (mapSize * 2)) - mapSize) / 2,
-      ((Math.random() * (mapSize * 2)) - mapSize) / 2, 0.1],
-    size: [(Math.random() * 0.03), (Math.random() * 0.03),
-      (Math.random() * 0.03)],
-  });
-}
 /**
  * @func Env is a react component that handles the WebGL environment using THREE.js
  * has directional lighting, orbit controls to control movement, and meshes
@@ -67,22 +60,50 @@ export default function Env() {
       creatures = newCreatures.creatures.creatures.map((creat) => {
         const newCreat = new Creature(new NeuralNetwork(
           creat.brain.input_nodes, creat.brain.hidden_nodes, creat.brain.output_nodes,
-        ),
+        ), mapSize,
         undefined, creat);
         newCreat.isChanged = true;
         return newCreat;
       });
+    });
+
+    // TODO: plants should update when new plant data is processed from firstUser
+    socket.on('updatePlants', (newPlants) => {
+      plants = [...newPlants.plants.plants];
+    });
+    socket.on('chunkEnterResponse', (envData) => {
+      if (isFirst) {
+        if ((!creatures.length || !plants.length)) {
+          creatures = envData.creatures.map((creat) => {
+            const newCreat = new Creature(new NeuralNetwork(
+              creat.body.brain.input_nodes, creat.body.brain.hidden_nodes,
+              creat.body.brain.output_nodes,
+            ), mapSize,
+            undefined, creat);
+            newCreat.isChanged = true;
+            return newCreat;
+          });
+          plants = envData.plants;
+        }
+      }
+      setUpdate([]);
     });
     // response from the isFirstUser emitter.
     socket.on('firstResponse', (bool) => {
       if (bool) {
         isFirst = true;
       }
+      socket.emit('chunkEnter');
     });
+    socket.emit('isFirstUser');
     setInterval(() => {
       socket.emit('isFirstUser');
-      // TODO: save creatures to the database.
       socket.emit('saveCreatures', { creatures });
+      // TODO: save creatures to the database.
+      if (isFirst) {
+        socket.emit('addCreatures', creatures);
+        socket.emit('addFood', plants);
+      }
     }, 10000);
     return () => {
       // disconnect from page when user leaves site.
@@ -90,6 +111,20 @@ export default function Env() {
       socket.off();
     };
   }, []);
+
+  if (isFirst) {
+    if (!plants.length) {
+      for (let i = 0; i < plantAmount; i += 1) {
+        // generates random positions for the plants to spawn.
+        plants.push({
+          positions: [((Math.random() * (mapSize * 2)) - mapSize) / 2,
+            ((Math.random() * (mapSize * 2)) - mapSize) / 2, 0.1],
+          size: [(Math.random() * 0.03), (Math.random() * 0.03),
+            (Math.random() * 0.03)],
+        });
+      }
+    }
+  }
 
   /**
    * @func reproduce
@@ -114,7 +149,7 @@ export default function Env() {
 
     if (creatures.length < creaturePopulation) {
       // const creature = pickOne(savedCreatures);
-      const creature = new Creature(null, creatures.length - 1);
+      const creature = new Creature(null, mapSize, creatures.length - 1);
       creature.think();
       creature.update();
       creatures.push(creature);
@@ -128,7 +163,7 @@ export default function Env() {
    */
   function populate() {
     for (let j = 0; j < creaturePopulation; j += 1) {
-      creatures.push(new Creature(null, j));
+      creatures.push(new Creature(null, mapSize, j));
       // think helps creature make a new decision
       creatures[j].think();
       // update updates the creature's state.
@@ -162,7 +197,6 @@ export default function Env() {
       const lp = creat.lockedPlant;
       if (creat.x - lp.positions[0] > prevCreat.x - lp.positions[0]) {
         creat.score += 0.1;
-        // console.log(creat.x, prevCreat.x);
       } else if (creat.y - lp.positions[1] > prevCreat.y - lp.positions[1]) {
         creat.score += 0.1;
       } else {
@@ -171,9 +205,11 @@ export default function Env() {
     }
   }
 
-  useEffect(() => {
-    populate();
-  }, []);
+  if (isFirst) {
+    if (!creatures.length) {
+      populate();
+    }
+  }
 
   // If the user is the first user, the code below will fire.
   if (isFirst) {
@@ -247,7 +283,6 @@ export default function Env() {
             creat.lockedPlant = null;
             creat.lifeSpan += 400;
             creat.size += 0.01;
-            // creat.speed -= 0.0002;
             reproduce(creat);
             plants.splice(p, 1);
             plants.push({
@@ -267,24 +302,26 @@ export default function Env() {
       } else {
         savedCreatures.push(creatures.splice(k, 1)[0]);
         savedCreatures[savedCreatures.length - 1].lifeSpan = 100;
-        deathCount += 1;
+        deleteCreature(creat.name).then(() => {
+          deathCount += 1;
+        }).catch((err) => console.error(err));
       }
     });
     socket.emit('showCreatures', { creatures });
+    socket.emit('showPlants', { plants });
   }
-  let timer;
-  let repopulator;
-  let counter;
-  useEffect(() => {
-    // to continue with the interval times until all creatures die.
-    if (deathCount !== creatures.length && creatures.length > 1 && !timer) {
-      timer = setInterval(() => {
-        setUpdate([]);
-      }, 50);
-    }
+
+  if (deathCount !== creatures.length && creatures.length > 1 && !timer) {
+    timer = setInterval(() => {
+      setUpdate([]);
+    }, 50);
+  }
+  if (!repopulator) {
     repopulator = setInterval(() => {
       repopulate();
     }, 1000);
+  }
+  if (!counter) {
     counter = setInterval(() => {
       creatures.forEach((cc) => {
         const c = cc;
@@ -296,6 +333,10 @@ export default function Env() {
         }
       });
     }, 1000);
+  }
+
+  useEffect(() => {
+    // to continue with the interval times until all creatures die.
   }, []);
   // when all creatures die, the environment re-populates.
   if (deathCount === creaturePopulation) {
@@ -303,6 +344,7 @@ export default function Env() {
     deathCount = 0;
     savedCreatures = [];
   }
+
   return (
     <div style={{ height: window.innerHeight * 0.97, backgroundColor: 'black' }}>
       <Canvas camera={{ zoom: 60, position: [0, 20, 100] }}>

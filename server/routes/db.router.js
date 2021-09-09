@@ -1,13 +1,13 @@
 const { Router } = require('express');
 const {
-  addCreature, killCreature, updateCreature, getCreatures,
+  addCreature, killCreature, getCreatures,
 } = require('../db/models/creatures');
 
 const dbRouter = Router();
 
 // getting creature data from mongo database.
 dbRouter.get('/data/creature', async (req, res) => {
-  const { creatureData: data } = await getCreatures();
+  const data = await getCreatures().catch((err) => console.error(err));
   res.send(data);
 });
 
@@ -18,18 +18,11 @@ dbRouter.post('/data/creature', async (req, res) => {
   res.end();
 });
 
-// updating creature data from the database.
-dbRouter.put('/data/creature/:id', async (req, res) => {
-  const { id, creature } = req.query;
-  await updateCreature(id, creature);
-  res.end();
-});
-
 // deleting a creature from the database.
-dbRouter.delete('/data/creature/:id', async (req, res) => {
-  const { id } = req.params;
-  await killCreature(id);
-  res.end();
+dbRouter.put('/data/creature', async (req, res) => {
+  const { id } = req.body;
+  const result = await killCreature(id).catch((err) => console.error(err));
+  res.send(result);
 });
 
 // exporting the dbrouter.
