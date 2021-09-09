@@ -8,7 +8,7 @@ import { OrbitControls } from '@react-three/drei';
 // import the creature Neural Network into the 3D environment.
 import Creature from '../../model-config/creature';
 import NeuralNetwork from '../../helpers/nn';
-import Helpers from '../../helpers/general_helpers';
+import { deleteCreature } from '../../helpers/general_helpers';
 import { pickOne, calculateFitness } from '../../model-config/ga';
 import Gui from '../gui/Gui';
 import { CreatureModel, Plant, Land } from './3DHelpers';
@@ -73,8 +73,16 @@ export default function Env() {
     });
     socket.on('chunkEnterResponse', (envData) => {
       if (isFirst) {
-        if (!creatures.length || !plants.length) {
-          creatures = envData.creatures;
+        if ((!creatures.length || !plants.length)) {
+          creatures = envData.creatures.map((creat) => {
+            const newCreat = new Creature(new NeuralNetwork(
+              creat.body.brain.input_nodes, creat.body.brain.hidden_nodes,
+              creat.body.brain.output_nodes,
+            ), mapSize,
+            undefined, creat);
+            newCreat.isChanged = true;
+            return newCreat;
+          });
           plants = envData.plants;
         }
       }
@@ -90,8 +98,12 @@ export default function Env() {
     socket.emit('isFirstUser');
     setInterval(() => {
       socket.emit('isFirstUser');
-      // TODO: save creatures to the database.
       socket.emit('saveCreatures', { creatures });
+      // TODO: save creatures to the database.
+      if (isFirst) {
+        socket.emit('addCreatures', creatures);
+        socket.emit('addFood', plants);
+      }
     }, 10000);
     return () => {
       // disconnect from page when user leaves site.
@@ -101,7 +113,6 @@ export default function Env() {
   }, []);
 
   if (isFirst) {
-    console.log(plants.length);
     if (!plants.length) {
       for (let i = 0; i < plantAmount; i += 1) {
         // generates random positions for the plants to spawn.
@@ -272,7 +283,6 @@ export default function Env() {
             creat.lockedPlant = null;
             creat.lifeSpan += 400;
             creat.size += 0.01;
-            // creat.speed -= 0.0002;
             reproduce(creat);
             plants.splice(p, 1);
             plants.push({
@@ -292,7 +302,9 @@ export default function Env() {
       } else {
         savedCreatures.push(creatures.splice(k, 1)[0]);
         savedCreatures[savedCreatures.length - 1].lifeSpan = 100;
-        deathCount += 1;
+        deleteCreature(creat.name).then(() => {
+          deathCount += 1;
+        }).catch((err) => console.error(err));
       }
     });
     socket.emit('showCreatures', { creatures });
@@ -332,6 +344,7 @@ export default function Env() {
     deathCount = 0;
     savedCreatures = [];
   }
+
   return (
     <div style={{ height: window.innerHeight * 0.97, backgroundColor: 'black' }}>
       <Canvas camera={{ zoom: 60, position: [0, 20, 100] }}>
