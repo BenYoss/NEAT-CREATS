@@ -28,15 +28,15 @@ function carnProb(x, self) {
     return newx;
   }
   if (x < 0.1 && self) {
-    creature.isCarn = true;
+    // creature.isCarn = true;
   }
   return x;
 }
 
 class Creature {
   constructor(brain, map, index = 0, options = {}) {
-    this.y = options.y || ((Math.random() * (map * 4)) - (map * 2)) / 2;
-    this.x = options.x || ((Math.random() * (map * 4)) - (map * 2)) / 2;
+    this.y = options.y || ((Math.random() * (10 * 2)) - 10) / 2;
+    this.x = options.x || ((Math.random() * (10 * 2)) - 10) / 2;
     this.name = options.name || faker.name.findName();
     // locked plant/creat variables help the creature lock on a target.
     this.lockedPlant = options.lockedPlant || null;
@@ -47,7 +47,7 @@ class Creature {
     this.index = options.index || index;
     this.speed = options.speed || 0.1;
     // what generation is the child creature from.
-    this.generation = options.generation || 0;
+    this.genus = options.genus || 0;
     // how long the creature will live (based on ticks)
     this.lifeSpan = options.lifeSpan || 1000;
     // starting size of creature.
@@ -58,7 +58,6 @@ class Creature {
     /**
      * y location of creature
      * x location of creature
-     * creature eat
      * creature size
      * creature speed
      */
@@ -120,7 +119,7 @@ class Creature {
     } else if (output[1] <= 1) {
       this.right();
     }
-    this.editSpeed(output[2] / 5);
+    this.editSpeed((output[2] * 10) / 70);
   }
 
   update() {
