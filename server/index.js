@@ -13,14 +13,16 @@ const server = require('http').createServer(app);
 const {
   User, Creature, Plant,
 } = require('./db/models/models');
+const { dbRouter } = require('./routes/db.router');
 
 let firstUserId;
 
 const io = socketio(server);
 // app configurations
 app.use(express.json());
+app.use(dbRouter);
 app.use(express.static(path.resolve('./client', 'dist')));
-app.get('*', (req, res) => {
+app.get('/', (req, res) => {
   res.sendFile(path.resolve('./client', 'dist/index.html'));
 });
 // Socket operations
@@ -76,8 +78,17 @@ io.on('connection', async (socket) => {
       socket.emit('firstResponse', false);
     }
   });
+
+  // TODO: when a creature dies, the record associated with said creature will be deleted.
+
+  socket.on('killCreature', (creature) => {
+    Creature.killCreature(creature);
+  });
   // TODO: when a user enters the chunk, all creatures/plants in the chunk will render.
 
+  socket.on('updateInfo', async (data) => {
+    await Creature.updateCreature(data.creatures).catch((err) => console.error(err));
+  });
   // TODO: when a creature reaches the edge of the chunk, it will move to a new chunk.
 
   // TODO: when a user enters a chunk, the chunk will render.
@@ -98,6 +109,8 @@ io.on('connection', async (socket) => {
   // TODO: creatures should be persisted to database using mongoDB methods.
   socket.on('addCreatures', async (creatures) => {
     const addCreatures = creatures.map((creat) => new Promise((res) => {
+      const body = creat;
+      creat.body = { ...body };
       res(Creature.addCreature(creat));
     }));
     await Promise.all(addCreatures);
@@ -110,9 +123,6 @@ io.on('connection', async (socket) => {
     await Promise.all(addPlants);
   });
   // TODO: should update the state of the creatures in the client.
-  socket.on('updateState', (creatures) => {
-    console.log(creatures);
-  });
 
   // When the user disconnects, the user's record will be wiped.
   socket.on('disconnect', async () => {
