@@ -4,10 +4,10 @@ const mongoose = require('mongoose');
 
 // The schema for the Plant model.
 const plantSchema = new mongoose.Schema({
+  id_chunk: Number,
   name: String,
-  posx: Number,
-  posy: Number,
-  size: Number,
+  positions: Array,
+  size: Array,
 });
 
 // creating a new mongoose model instance for Plant.
@@ -15,19 +15,22 @@ const Plant = mongoose.model('Plant', plantSchema);
 
 // adds a Plant to the database.
 const addPlant = ({
-  id_chunk,
+  id_chunk = 0,
   size,
-  posx,
-  posy,
+  positions,
 }) => {
   const plant = new Plant({
     id_chunk,
     size,
-    posx,
-    posy,
+    positions,
   });
-
-  return plant.save();
+  return Plant.find({ id_chunk }).then((plants) => {
+    if (plants.length < 50) {
+      return plant.save();
+    }
+    return null;
+  })
+    .catch((err) => console.error(err));
 };
 
 // kills a Plant in the database.
